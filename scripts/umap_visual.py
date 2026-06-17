@@ -1,14 +1,14 @@
-from skfda import FDataGrid
+# from skfda import FDataGrid
 
-from src.Filter import *
-from src.MNEDataPreparation import MNEDataPreparation
-from loader.eeg_recording import EEGLoader
+# from src.Filter import *
+# from src.MNEDataPreparation import MNEDataPreparation
+# from loader.eeg_recording import EEGLoader
 from loader.patients import PatientsCSVLoader
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import numpy as np
-from skfda.representation.basis import FourierBasis, BSplineBasis
-from skfda.preprocessing.dim_reduction import FPCA
+#from skfda.representation.basis import FourierBasis, BSplineBasis
+# from skfda.preprocessing.dim_reduction import FPCA
 import pandas as pd
 import mne
 
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     X = []
     K = 4  # output dimensions per channel
-    basis = BSplineBasis(n_basis=K)
+    # basis = BSplineBasis(n_basis=K)
 
     sub_inputs = []
     ep_amt = 0
@@ -153,6 +153,36 @@ if __name__ == '__main__':
     X = np.load("C:/Users/picul/Videos/Applied/Dataset_Full/Embeddings/windowed_power_embeddings.npy")
     # X = X.reshape(X.shape[0], -1)
 
+    print(X.shape)
+    spectral_centroids = []
+    for example in X:
+        # example shape: (num_windows, 30)
+        num_windows = example.shape[0]
+        n_channels = 6
+
+        # indices: delta=0, theta=1, alpha=2, beta=3, gamma=4
+        low_freqs = [0, 1]  # delta, theta
+        high_freqs = [2, 3, 4]  # alpha, beta, gamma
+
+        channel_ratios = np.zeros((n_channels, num_windows))
+
+        for ch in range(n_channels):
+            power_all_bands = example[:, ch::n_channels]  # (num_windows, n_bands)
+
+            low_power = power_all_bands[:, low_freqs].sum(axis=1)
+            high_power = power_all_bands[:, high_freqs].sum(axis=1)
+
+            ratio = high_power / (low_power + 1e-8)  # avoid division by zero
+
+            window_size = 3
+            filtered = np.convolve(ratio, np.ones(window_size) / window_size, mode='same')
+            channel_ratios[ch, :] = filtered
+
+        spectral_centroids.append(channel_ratios)
+    np.save("C:/Users/picul/Videos/Applied/Dataset_Full/Embeddings/power_ratios_2.npy", spectral_centroids)
+
+    exit(0)
+
     spectral_centroids = []
 
     for example in X:
@@ -184,15 +214,57 @@ if __name__ == '__main__':
     # Shape: (num_examples, num_channels, num_windows)
 
     print("Shape: ", spectral_centroids.shape)
-    plt.plot(spectral_centroids[0].T)
+    # plt.plot(spectral_centroids[0].T)
 
-    plt.show()
-
-
-    print(X.shape)
-
+    # plt.show()
     exit(0)
 
+    # Filling the samples with the couples of patient and night id
+    samples = []
+    for patient_id in range(1, 40 + 1):
+        for night_id in range(1, 2 + 1):
+            samples.append((patient_id, night_id))
+
+    # Removing problematic samples (Totally not understandable)
+    samples.remove((8, 1))
+    samples.remove((14, 2))
+
+    df = PatientsCSVLoader.load_dataframe('C:/Users/picul/Videos/Applied/Dataset_Full/patients.csv')
+    # shape: (n_epochs, n_channels * 5)
+
+    # Extract physiological features
+    patient_features = []
+    y_regression = []
+    y_classification = []
+
+    for (p_id, n_id) in samples:
+        row = df[(df['user_id'] == p_id) & (df['night_id'] == n_id)]
+
+        attacks = row.iloc[0]['AHI']
+        if pd.isna(attacks) or attacks == '' or attacks == 'NaN':
+            attacks = 0
+        else:
+            attacks = float(attacks.replace(',', '.'))
+
+        # odi = row.iloc[0]['ODI']
+        # if pd.isna(odi) or odi == '' or odi == 'NaN':
+        #     odi = 0
+
+        age = row.iloc[0]['age']
+        sex = 1 if row.iloc[0]['sex'] == 'M' else 0
+        height = row.iloc[0]['height']
+        weight = row.iloc[0]['weight']
+        pulse = row.iloc[0]['pulse']
+        bp = row.iloc[0]['BPsys/BPdia']
+
+        patient_features.append([age, sex, height, weight, pulse, float(bp.split('/')[0])])
+        y_regression.append(attacks)
+        y_classification.append(1 if attacks > 0 else 0)
+
+    X = np.array(patient_features)
+
+    print(X.shape)
+    # X = X.reshape(X.shape[0], -1)
     import umap
 
     reducer = umap.UMAP(n_components=2)
