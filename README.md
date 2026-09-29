@@ -79,6 +79,10 @@ Several representations are compared:
 
 PCA and UMAP are used as exploratory tools to assess whether the representations preserve severity-related structure. Wavelet and raw-power features appear more informative than the FPCA representation for this dataset.
 
+![UMAP](resources/umap.png)
+
+![PCA Loadings interpretation](resources/PCA_loadings.png)
+
 ### 3. Leakage-safe multimodal modeling
 
 EEG embeddings are concatenated with patient-level physiological features. All learned preprocessing operations - including scaling, PCA, feature selection, and any data-dependent embedding transformation - are fitted on the training fold only.
@@ -110,6 +114,8 @@ An attention-based multimodal network is also explored. It:
 6. uses separate heads for apnea classification and AHI regression.
 
 L1 regularization and dropout are used to limit overfitting. Because the dataset contains only 78 usable recordings, the neural results are treated as exploratory rather than clinically conclusive.
+
+![Attention weights and EEG power-ratio shift](resources/power_shift.png)
 
 ## Evaluation
 
