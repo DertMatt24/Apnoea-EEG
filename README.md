@@ -173,7 +173,3 @@ These results should be interpreted cautiously: the number of independent patien
 
 1. A. Subasi and E. Ercelebi, *Classification of EEG signals using neural network and logistic regression*.
 2. A. S. Al-Fahoum and A. A. Al-Fraihat, *Methods of EEG Signal Features Extraction Using Linear Analysis in Frequency and Time-Frequency Domains*.
-
-## Disclaimer
-
-This project is an academic machine-learning study. It is not a medical device and must not be used for diagnosis or treatment decisions.
